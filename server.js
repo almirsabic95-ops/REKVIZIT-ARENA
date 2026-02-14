@@ -128,3 +128,27 @@ io.on('connection', (socket) => {
             socket.emit('rezultat', { tip: 'netocno', poruka: "Netočno! -2 boda" });
             saveDB();
         }
+    });
+});
+
+function novaRunda(soba) {
+    const lista = pitanjaPodaci[soba];
+    if (!lista || lista.length === 0) return;
+    trenutnaPitanja[soba] = lista[Math.floor(Math.random() * lista.length)];
+    tkoJeOdgovorio[soba] = {};
+    tajmeri[soba] = 30;
+    io.to(soba).emit('novo_pitanje', { pitanje: trenutnaPitanja[soba].pitanje, vrijeme: 30 });
+
+    let int = setInterval(() => {
+        tajmeri[soba]--;
+        if (tajmeri[soba] === 15 || tajmeri[soba] <= 10) io.to(soba).emit('tick', tajmeri[soba]);
+        if (tajmeri[soba] <= 0) {
+            clearInterval(int);
+            io.to(soba).emit('obavijest', `Vrijeme isteklo! Odgovor: ${trenutnaPitanja[soba].odgovor}`);
+            setTimeout(() => novaRunda(soba), 3000);
+        }
+    }, 1000);
+}
+
+function saveDB() { fs.writeFileSync(BODOVI_FILE, JSON.stringify(korisnici, null, 2)); }
+server.listen(PORT, () => console.log("Arena Server Online"));
